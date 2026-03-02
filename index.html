@@ -8328,22 +8328,30 @@
             }
 
             // ── INIT ──────────────────────────────────────────────────────────────────────
-            db.auth.onAuthStateChange(async (event, session) => {
-                if (session) {
-                    currentUser = session.user;
-                    const email = currentUser.email;
-                    const initials = email.substring(0, 2).toUpperCase();
-                    document.getElementById('user-avatar').textContent = initials;
-                    document.getElementById('user-email-display').textContent = email.split('@')[0];
-                    document.getElementById('auth-screen').classList.add('hidden');
-                    await loadProgress();
-                    renderHome();
-                } else {
-                    currentUser = null;
-                    document.getElementById('auth-screen').classList.remove('hidden');
-                }
-            }
-            );
+db.auth.onAuthStateChange(async (event, session) => {
+    if (session) {
+        currentUser = session.user;
+        const email = currentUser.email;
+        const initials = email.substring(0, 2).toUpperCase();
+
+        document.getElementById('user-avatar').textContent = initials;
+        document.getElementById('user-email-display').textContent = email.split('@')[0];
+        document.getElementById('auth-screen').classList.add('hidden');
+        
+        // ✅ 1️⃣ On affiche immédiatement (progression vide)
+        renderHome();
+        
+        // ✅ 2️⃣ On charge la progression en arrière-plan
+        await loadProgress();
+        
+        // ✅ 3️⃣ On re-render avec les vraies données
+        renderHome();
+
+    } else {
+        currentUser = null;
+        document.getElementById('auth-screen').classList.remove('hidden');
+    }
+});
         </script>
     </body>
 </html>
