@@ -1,0 +1,1179 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MedQCM — Anatomie & Physiologie</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f4f5f7;
+    --card-bg: #ffffff;
+    --text: #1a1d23;
+    --text-muted: #6b7280;
+    --text-light: #9ca3af;
+    --border: #e5e7eb;
+    --radius: 18px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.07);
+    --shadow-hover: 0 8px 32px rgba(0,0,0,0.12);
+
+    /* Chapter colors */
+    --c1: #fff3e0; --c1a: #f97316; --c1b: #fed7aa;
+    --c2: #fce7f3; --c2a: #ec4899; --c2b: #fbcfe8;
+    --c3: #e0f2fe; --c3a: #0ea5e9; --c3b: #bae6fd;
+    --c4: #f0fdf4; --c4a: #22c55e; --c4b: #bbf7d0;
+    --c5: #fef3c7; --c5a: #f59e0b; --c5b: #fde68a;
+    --c6: #fdf2f8; --c6a: #a855f7; --c6b: #e9d5ff;
+    --c7: #fff1f2; --c7a: #f43f5e; --c7b: #fecdd3;
+    --c8: #ecfdf5; --c8a: #10b981; --c8b: #a7f3d0;
+    --c9: #fffbeb; --c9a: #d97706; --c9b: #fde68a;
+    --c10: #eef2ff; --c10a: #6366f1; --c10b: #c7d2fe;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Outfit', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* ── NAV ── */
+  nav {
+    background: #fff;
+    border-bottom: 1px solid var(--border);
+    padding: 0 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .nav-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 800;
+    font-size: 18px;
+    color: var(--text);
+    text-decoration: none;
+  }
+  .nav-logo-icon {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, #6366f1, #ec4899);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .nav-tabs {
+    display: flex;
+    gap: 4px;
+  }
+  .nav-tab {
+    padding: 8px 18px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-muted);
+    cursor: pointer;
+    border: none;
+    background: none;
+    font-family: 'Outfit', sans-serif;
+    transition: all 0.15s;
+  }
+  .nav-tab:hover { background: var(--bg); color: var(--text); }
+  .nav-tab.active {
+    background: var(--text);
+    color: white;
+  }
+  .nav-right { display: flex; align-items: center; gap: 12px; }
+  .btn-upload {
+    padding: 8px 18px;
+    border-radius: 10px;
+    background: #6366f1;
+    color: white;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    font-family: 'Outfit', sans-serif;
+    display: flex; align-items: center; gap: 6px;
+    transition: background 0.15s;
+  }
+  .btn-upload:hover { background: #4f46e5; }
+
+  /* ── MAIN ── */
+  main {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 40px 32px 80px;
+  }
+
+  /* ── UPLOAD BANNER ── */
+  #upload-banner {
+    background: #eef2ff;
+    border: 1.5px dashed #6366f1;
+    border-radius: var(--radius);
+    padding: 40px;
+    text-align: center;
+    margin-bottom: 40px;
+    display: none;
+  }
+  #upload-banner.visible { display: block; }
+  #upload-banner h2 { font-size: 20px; font-weight: 700; margin-bottom: 8px; color: #3730a3; }
+  #upload-banner p { color: #6366f1; font-size: 14px; margin-bottom: 20px; }
+  #upload-banner label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 28px;
+    background: #6366f1;
+    color: white;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  #upload-banner label:hover { background: #4f46e5; }
+  #file-input { display: none; }
+  #upload-error { color: #ef4444; font-size: 13px; margin-top: 12px; }
+
+  /* ── PAGE HEADER ── */
+  .page-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 32px;
+    gap: 20px;
+  }
+  .page-header h1 {
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+  .overall-progress {
+    background: white;
+    border-radius: 14px;
+    padding: 14px 20px;
+    border: 1px solid var(--border);
+    text-align: right;
+    min-width: 160px;
+  }
+  .overall-progress .num {
+    font-size: 22px;
+    font-weight: 800;
+    color: #6366f1;
+    line-height: 1;
+  }
+  .overall-progress .label {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 3px;
+    font-weight: 500;
+  }
+  .progress-bar-wrap {
+    background: #f3f4f6;
+    border-radius: 99px;
+    height: 5px;
+    margin-top: 8px;
+    overflow: hidden;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    border-radius: 99px;
+    background: linear-gradient(90deg, #6366f1, #ec4899);
+    transition: width 0.4s ease;
+  }
+
+  /* ── RANDOM CARD ── */
+  .random-card {
+    background: linear-gradient(135deg, #1a1d23 0%, #2d2f3e 100%);
+    border-radius: var(--radius);
+    padding: 28px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 36px;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .random-card::before {
+    content: '';
+    position: absolute;
+    top: -40px; right: -40px;
+    width: 180px; height: 180px;
+    background: rgba(99,102,241,0.15);
+    border-radius: 50%;
+  }
+  .random-card::after {
+    content: '';
+    position: absolute;
+    bottom: -60px; right: 60px;
+    width: 140px; height: 140px;
+    background: rgba(236,72,153,0.1);
+    border-radius: 50%;
+  }
+  .random-card:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(0,0,0,0.18); }
+  .random-card.disabled { opacity: 0.5; cursor: not-allowed; }
+  .random-card.disabled:hover { transform: none; box-shadow: none; }
+  .random-left { position: relative; z-index: 1; }
+  .random-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(99,102,241,0.3);
+    color: #a5b4fc;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 4px 12px;
+    border-radius: 99px;
+    margin-bottom: 10px;
+  }
+  .random-card h2 {
+    font-size: 22px;
+    font-weight: 800;
+    color: white;
+    margin-bottom: 6px;
+  }
+  .random-card p {
+    font-size: 13px;
+    color: #9ca3af;
+    font-weight: 400;
+  }
+  .random-arrow {
+    position: relative; z-index: 1;
+    width: 48px; height: 48px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    color: white;
+    transition: background 0.15s;
+  }
+  .random-card:hover .random-arrow { background: rgba(99,102,241,0.5); }
+
+  /* ── SECTION TITLE ── */
+  .section-title {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+  }
+
+  /* ── CHAPTER GRID ── */
+  .chapters-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 16px;
+  }
+
+  .chapter-card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    overflow: hidden;
+    cursor: pointer;
+    border: 1.5px solid transparent;
+    transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+    position: relative;
+  }
+  .chapter-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-hover);
+  }
+  .chapter-card.done { border-color: #bbf7d0; }
+
+  .chapter-card-thumb {
+    height: 140px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .chapter-card-thumb .icon-circle {
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    border: 2.5px solid;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 32px;
+    position: relative; z-index: 1;
+  }
+  .chapter-card-thumb .decoration {
+    position: absolute;
+    width: 120px; height: 120px;
+    border-radius: 50%;
+    border: 1px solid;
+    opacity: 0.2;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+  }
+  .chapter-card-thumb .decoration2 {
+    position: absolute;
+    width: 160px; height: 160px;
+    border-radius: 50%;
+    border: 1px solid;
+    opacity: 0.1;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+  /* Done badge */
+  .done-badge {
+    position: absolute;
+    top: 12px; right: 12px;
+    background: #22c55e;
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 99px;
+  }
+  .ch-num-badge {
+    position: absolute;
+    top: 12px; right: 12px;
+    background: rgba(0,0,0,0.12);
+    color: rgba(0,0,0,0.5);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 99px;
+  }
+
+  .chapter-card-body {
+    padding: 16px 18px 18px;
+  }
+  .chapter-card-body h3 {
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 4px;
+    color: var(--text);
+    line-height: 1.3;
+  }
+  .chapter-card-body .meta {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+    font-weight: 500;
+  }
+  .chapter-card-body .meta span { font-weight: 400; color: var(--text-light); }
+  .chapter-progress-wrap {
+    background: #f3f4f6;
+    border-radius: 99px;
+    height: 5px;
+    overflow: hidden;
+  }
+  .chapter-progress-fill {
+    height: 100%;
+    border-radius: 99px;
+    transition: width 0.4s ease;
+  }
+
+  /* ── SESSION OVERLAY ── */
+  #session-overlay {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    z-index: 200;
+    display: none;
+    overflow-y: auto;
+  }
+  #session-overlay.visible { display: block; }
+
+  .session-nav {
+    background: white;
+    border-bottom: 1px solid var(--border);
+    padding: 0 32px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .session-back {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 14px; font-weight: 600; color: var(--text-muted);
+    cursor: pointer; border: none; background: none;
+    font-family: 'Outfit', sans-serif;
+    transition: color 0.15s;
+  }
+  .session-back:hover { color: var(--text); }
+  .session-info {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-muted);
+  }
+  .session-info strong { color: var(--text); }
+  .session-counter {
+    background: var(--bg);
+    padding: 6px 14px;
+    border-radius: 99px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .session-main {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+
+  /* ── PROGRESS STRIP ── */
+  .session-progress-strip {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 32px;
+    flex-wrap: wrap;
+  }
+  .strip-dot {
+    height: 5px;
+    flex: 1;
+    min-width: 6px;
+    border-radius: 99px;
+    background: #e5e7eb;
+    transition: background 0.3s;
+  }
+  .strip-dot.done-correct { background: #22c55e; }
+  .strip-dot.done-wrong { background: #ef4444; }
+  .strip-dot.current { background: #6366f1; }
+
+  /* ── QCM CARD ── */
+  .qcm-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .qcm-chip {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 4px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+  .qcm-question {
+    background: white;
+    border-radius: 16px;
+    padding: 24px 28px;
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 1.65;
+    color: var(--text);
+    border: 1.5px solid var(--border);
+    margin-bottom: 16px;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.04);
+  }
+
+  .options-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .option-btn {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 14px 18px;
+    background: white;
+    border: 1.5px solid var(--border);
+    border-radius: 14px;
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+    font-family: 'Outfit', sans-serif;
+    font-size: 14px;
+    font-weight: 400;
+    color: var(--text);
+    line-height: 1.5;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .option-btn:hover:not(.validated) { border-color: #6366f1; background: #f5f3ff; }
+  .option-btn.selected:not(.validated) { border-color: #6366f1; background: #eef2ff; }
+
+  .option-btn.correct-selected { border-color: #22c55e; background: #f0fdf4; }
+  .option-btn.correct-missed { border-color: #22c55e; background: #f0fdf4; border-style: dashed; }
+  .option-btn.wrong-selected { border-color: #ef4444; background: #fff1f2; }
+  .option-btn.neutral-after { opacity: 0.45; }
+
+  .option-letter {
+    width: 28px; height: 28px;
+    border-radius: 8px;
+    background: #f3f4f6;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--text-muted);
+    flex-shrink: 0;
+    margin-top: 1px;
+    transition: all 0.15s;
+  }
+  .option-btn.selected:not(.validated) .option-letter {
+    background: #6366f1;
+    color: white;
+  }
+  .option-btn.correct-selected .option-letter,
+  .option-btn.correct-missed .option-letter { background: #22c55e; color: white; }
+  .option-btn.wrong-selected .option-letter { background: #ef4444; color: white; }
+
+  /* ── ACTION BUTTONS ── */
+  .action-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 8px;
+  }
+  .btn-validate {
+    flex: 1;
+    padding: 15px 24px;
+    border-radius: 14px;
+    background: #1a1d23;
+    color: white;
+    font-family: 'Outfit', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    border: none;
+    cursor: pointer;
+    transition: background 0.15s, opacity 0.15s;
+  }
+  .btn-validate:disabled { opacity: 0.35; cursor: not-allowed; }
+  .btn-validate:not(:disabled):hover { background: #374151; }
+
+  .btn-next {
+    flex: 1;
+    padding: 15px 24px;
+    border-radius: 14px;
+    background: #6366f1;
+    color: white;
+    font-family: 'Outfit', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    border: none;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    transition: background 0.15s;
+  }
+  .btn-next:hover { background: #4f46e5; }
+
+  /* ── FEEDBACK ── */
+  .feedback-box {
+    padding: 14px 18px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .feedback-box.correct { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+  .feedback-box.wrong { background: #fff1f2; color: #be123c; border: 1px solid #fecdd3; }
+  .feedback-box .answer-detail { font-weight: 400; font-size: 13px; margin-top: 4px; color: inherit; opacity: 0.8; }
+
+  /* ── RESULTS ── */
+  #results-overlay {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    z-index: 300;
+    display: none;
+    overflow-y: auto;
+  }
+  #results-overlay.visible { display: block; }
+
+  .results-main {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 60px 24px 80px;
+  }
+  .score-hero {
+    background: linear-gradient(135deg, #1a1d23, #2d2f3e);
+    border-radius: 24px;
+    padding: 48px 40px;
+    text-align: center;
+    margin-bottom: 32px;
+    position: relative;
+    overflow: hidden;
+  }
+  .score-hero::before {
+    content: '';
+    position: absolute;
+    top: -60px; left: -60px;
+    width: 200px; height: 200px;
+    background: rgba(99,102,241,0.12);
+    border-radius: 50%;
+  }
+  .score-pct {
+    font-size: 72px;
+    font-weight: 900;
+    line-height: 1;
+    margin-bottom: 8px;
+    position: relative;
+  }
+  .score-label {
+    font-size: 18px;
+    font-weight: 600;
+    color: #9ca3af;
+    margin-bottom: 4px;
+  }
+  .score-sub {
+    font-size: 14px;
+    color: #6b7280;
+    position: relative;
+  }
+
+  .results-actions {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 32px;
+  }
+  .btn-retry {
+    flex: 1;
+    padding: 15px 24px;
+    border-radius: 14px;
+    background: white;
+    color: var(--text);
+    font-family: 'Outfit', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    border: 1.5px solid var(--border);
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  .btn-retry:hover { border-color: #6366f1; color: #6366f1; }
+  .btn-home {
+    flex: 1;
+    padding: 15px 24px;
+    border-radius: 14px;
+    background: #6366f1;
+    color: white;
+    font-family: 'Outfit', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    border: none;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .btn-home:hover { background: #4f46e5; }
+
+  .errors-section h3 {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 14px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .error-item {
+    background: white;
+    border: 1.5px solid #fecdd3;
+    border-radius: 14px;
+    padding: 16px 20px;
+    margin-bottom: 10px;
+  }
+  .error-item .err-meta { font-size: 11px; color: var(--text-light); margin-bottom: 6px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  .error-item .err-q { font-size: 13.5px; color: var(--text); line-height: 1.5; margin-bottom: 8px; }
+  .error-item .err-ans {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: #f0fdf4;
+    color: #15803d;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 12px;
+    border-radius: 8px;
+    border: 1px solid #bbf7d0;
+  }
+
+  /* ── ANIMATIONS ── */
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .chapter-card { animation: fadeInUp 0.4s ease both; }
+  .chapter-card:nth-child(1)  { animation-delay: 0.05s; }
+  .chapter-card:nth-child(2)  { animation-delay: 0.10s; }
+  .chapter-card:nth-child(3)  { animation-delay: 0.15s; }
+  .chapter-card:nth-child(4)  { animation-delay: 0.20s; }
+  .chapter-card:nth-child(5)  { animation-delay: 0.25s; }
+  .chapter-card:nth-child(6)  { animation-delay: 0.30s; }
+  .chapter-card:nth-child(7)  { animation-delay: 0.35s; }
+  .chapter-card:nth-child(8)  { animation-delay: 0.40s; }
+  .chapter-card:nth-child(9)  { animation-delay: 0.45s; }
+  .chapter-card:nth-child(10) { animation-delay: 0.50s; }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(20px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  .qcm-question, .options-list { animation: slideIn 0.25s ease both; }
+
+  /* Responsive */
+  @media (max-width: 640px) {
+    nav { padding: 0 16px; }
+    main { padding: 24px 16px 60px; }
+    .chapters-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
+    .page-header { flex-direction: column; }
+    .session-main { padding: 24px 16px 60px; }
+    .score-pct { font-size: 56px; }
+    .nav-tabs { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a class="nav-logo" href="#">
+    <div class="nav-logo-icon">🧬</div>
+    MedQCM
+  </a>
+  <div class="nav-tabs">
+    <button class="nav-tab active">QCM</button>
+    <button class="nav-tab" style="opacity:0.4;cursor:not-allowed">Cours <small style="font-size:10px;opacity:0.6">bientôt</small></button>
+    <button class="nav-tab" style="opacity:0.4;cursor:not-allowed">Stats <small style="font-size:10px;opacity:0.6">bientôt</small></button>
+  </div>
+  <div class="nav-right">
+    <label class="btn-upload" for="file-input-nav">⬆ Charger JSON</label>
+    <input type="file" id="file-input-nav" accept=".json" style="display:none">
+  </div>
+</nav>
+
+<!-- MAIN PAGE -->
+<main id="home-page">
+
+  <!-- Upload banner (shown when no data) -->
+  <div id="upload-banner" class="visible">
+    <h2>📂 Charge tes QCM</h2>
+    <p>Importe le fichier <code>all_qcm.json</code> ou <code>all_qcm_compact.json</code> pour commencer</p>
+    <label for="file-input">
+      📁 Choisir le fichier JSON
+    </label>
+    <input type="file" id="file-input" accept=".json">
+    <div id="upload-error"></div>
+  </div>
+
+  <!-- Home content (hidden until data loaded) -->
+  <div id="home-content" style="display:none">
+
+    <div class="page-header">
+      <div>
+        <h1>QCM Anatomie & Physiologie</h1>
+        <p style="color:var(--text-muted);font-size:14px;margin-top:6px;font-weight:400">500 questions · 10 chapitres</p>
+      </div>
+      <div class="overall-progress">
+        <div class="num" id="overall-pct">0%</div>
+        <div class="label">progression globale</div>
+        <div class="progress-bar-wrap" style="width:130px">
+          <div class="progress-bar-fill" id="overall-bar" style="width:0%"></div>
+        </div>
+        <div style="font-size:11px;color:var(--text-light);margin-top:4px" id="overall-count">0 / 500 vus</div>
+      </div>
+    </div>
+
+    <!-- Random session button -->
+    <div class="random-card" id="random-btn" onclick="startRandom()">
+      <div class="random-left">
+        <div class="random-badge">🔀 Révision</div>
+        <h2>Session aléatoire</h2>
+        <p id="random-desc">20 questions parmi tous les QCM déjà vus</p>
+      </div>
+      <div class="random-arrow">→</div>
+    </div>
+
+    <div class="section-title">Par chapitre</div>
+    <div class="chapters-grid" id="chapters-grid"></div>
+  </div>
+
+</main>
+
+<!-- SESSION OVERLAY -->
+<div id="session-overlay">
+  <nav class="session-nav">
+    <button class="session-back" onclick="exitSession()">← Accueil</button>
+    <div class="session-info" id="session-label">Ch. 1 — Introduction</div>
+    <div class="session-counter" id="session-counter">1 / 50</div>
+  </nav>
+  <div class="session-main">
+    <div class="session-progress-strip" id="progress-strip"></div>
+    <div id="qcm-area"></div>
+  </div>
+</div>
+
+<!-- RESULTS OVERLAY -->
+<div id="results-overlay">
+  <div class="results-main">
+    <div class="score-hero">
+      <div class="score-pct" id="res-pct" style="color:#22c55e">—%</div>
+      <div class="score-label" id="res-grade">—</div>
+      <div class="score-sub" id="res-sub">— / — correctes</div>
+    </div>
+    <div class="results-actions">
+      <button class="btn-retry" onclick="retrySession()">↺ Recommencer</button>
+      <button class="btn-home" onclick="goHome()">Accueil →</button>
+    </div>
+    <div class="errors-section" id="errors-section"></div>
+  </div>
+</div>
+
+<script>
+// ─── DATA ─────────────────────────────────────────────────────────────────────
+const CHAPTER_META = {
+  1:  { name: "Introduction à l'anatomie",   icon: "🔬", bg: "var(--c1)",  color: "var(--c1a)", light: "var(--c1b)" },
+  2:  { name: "Tissu nerveux",               icon: "🧠", bg: "var(--c2)",  color: "var(--c2a)", light: "var(--c2b)" },
+  3:  { name: "Organes des sens",            icon: "👁️", bg: "var(--c3)",  color: "var(--c3a)", light: "var(--c3b)" },
+  4:  { name: "Tissu osseux",                icon: "🦴", bg: "var(--c4)",  color: "var(--c4a)", light: "var(--c4b)" },
+  5:  { name: "Système musculaire",          icon: "💪", bg: "var(--c5)",  color: "var(--c5a)", light: "var(--c5b)" },
+  6:  { name: "Système digestif",            icon: "🫁", bg: "var(--c6)",  color: "var(--c6a)", light: "var(--c6b)" },
+  7:  { name: "Sang & Cardiovasculaire",     icon: "❤️", bg: "var(--c7)",  color: "var(--c7a)", light: "var(--c7b)" },
+  8:  { name: "Respiratoire & Urinaire",     icon: "🫀", bg: "var(--c8)",  color: "var(--c8a)", light: "var(--c8b)" },
+  9:  { name: "Système reproducteur",        icon: "🧬", bg: "var(--c9)",  color: "var(--c9a)", light: "var(--c9b)" },
+  10: { name: "Glandes endocrines",          icon: "⚗️", bg: "var(--c10)", color: "var(--c10a)", light: "var(--c10b)" },
+};
+
+let QCM = [];
+let progress = {};   // { ch: { seen: Set([ids]), correct: n } }
+let seenIds = new Set();
+
+// ─── STORAGE ──────────────────────────────────────────────────────────────────
+const LS = {
+  save(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+  load(k, def) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : def; } catch { return def; } }
+};
+
+function loadState() {
+  const rawProgress = LS.load('qcm_progress', {});
+  progress = {};
+  for (const ch in rawProgress) {
+    progress[ch] = { seen: new Set(rawProgress[ch].seen || []), correct: rawProgress[ch].correct || 0 };
+  }
+  seenIds = new Set(LS.load('qcm_seen', []));
+}
+
+function saveState() {
+  const raw = {};
+  for (const ch in progress) {
+    raw[ch] = { seen: [...progress[ch].seen], correct: progress[ch].correct };
+  }
+  LS.save('qcm_progress', raw);
+  LS.save('qcm_seen', [...seenIds]);
+}
+
+// ─── FILE UPLOAD ──────────────────────────────────────────────────────────────
+function handleFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!Array.isArray(data) || !data[0]?.id) throw new Error('Format invalide');
+      QCM = data;
+      LS.save('qcm_data', data);
+      loadState();
+      initHome();
+    } catch {
+      document.getElementById('upload-error').textContent = '❌ Fichier invalide. Utilise all_qcm.json ou all_qcm_compact.json';
+    }
+  };
+  reader.readAsText(file);
+}
+
+document.getElementById('file-input').onchange = e => handleFile(e.target.files[0]);
+document.getElementById('file-input-nav').onchange = e => handleFile(e.target.files[0]);
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+(function init() {
+  const saved = LS.load('qcm_data', null);
+  if (saved) {
+    QCM = saved;
+    loadState();
+    initHome();
+  }
+})();
+
+function initHome() {
+  document.getElementById('upload-banner').classList.remove('visible');
+  document.getElementById('home-content').style.display = 'block';
+  renderHome();
+}
+
+function renderHome() {
+  const total = seenIds.size;
+  const pct = Math.round((total / 500) * 100);
+  document.getElementById('overall-pct').textContent = pct + '%';
+  document.getElementById('overall-bar').style.width = pct + '%';
+  document.getElementById('overall-count').textContent = `${total} / 500 vus`;
+
+  // Random btn
+  const rBtn = document.getElementById('random-btn');
+  if (total === 0) {
+    rBtn.classList.add('disabled');
+    document.getElementById('random-desc').textContent = 'Fais d\'abord un chapitre pour débloquer';
+  } else {
+    rBtn.classList.remove('disabled');
+    document.getElementById('random-desc').textContent = `20 questions parmi ${total} QCM vus`;
+  }
+
+  // Chapters grid
+  const grid = document.getElementById('chapters-grid');
+  grid.innerHTML = '';
+  for (let ch = 1; ch <= 10; ch++) {
+    const meta = CHAPTER_META[ch];
+    const seen = progress[ch]?.seen?.size || 0;
+    const done = seen >= 50;
+    const pctCh = Math.round((seen / 50) * 100);
+
+    const card = document.createElement('div');
+    card.className = 'chapter-card' + (done ? ' done' : '');
+    card.onclick = () => startChapter(ch);
+    card.innerHTML = `
+      <div class="chapter-card-thumb" style="background:${meta.bg}">
+        <div class="decoration" style="border-color:${meta.color}"></div>
+        <div class="decoration2" style="border-color:${meta.color}"></div>
+        <div class="icon-circle" style="border-color:${meta.color};color:${meta.color};background:${meta.bg}">
+          ${meta.icon}
+        </div>
+        ${done
+          ? '<div class="done-badge">✓ Terminé</div>'
+          : `<div class="ch-num-badge">Ch. ${ch}</div>`
+        }
+      </div>
+      <div class="chapter-card-body">
+        <h3>${meta.name}</h3>
+        <div class="meta">50 questions · <span>${seen} vues</span></div>
+        <div class="chapter-progress-wrap">
+          <div class="chapter-progress-fill" style="width:${pctCh}%;background:${meta.color}"></div>
+        </div>
+      </div>
+    `;
+    grid.appendChild(card);
+  }
+}
+
+// ─── SESSION STATE ─────────────────────────────────────────────────────────────
+let session = {
+  qcm: [], idx: 0, score: 0, errors: [],
+  mode: null, chapter: null,
+  dotStates: []  // 'pending' | 'correct' | 'wrong' | 'current'
+};
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function startChapter(ch) {
+  if (!QCM.length) return;
+  const qcm = QCM.filter(q => q.chapitre === ch);
+  session = { qcm, idx: 0, score: 0, errors: [], mode: 'chapter', chapter: ch, dotStates: Array(qcm.length).fill('pending') };
+  session.dotStates[0] = 'current';
+  openSession(`Ch. ${ch} — ${CHAPTER_META[ch].name}`, qcm.length);
+}
+
+function startRandom() {
+  if (!QCM.length || seenIds.size === 0) return;
+  const pool = QCM.filter(q => seenIds.has(q.id));
+  const batch = shuffle(pool).slice(0, Math.min(20, pool.length));
+  session = { qcm: batch, idx: 0, score: 0, errors: [], mode: 'random', chapter: null, dotStates: Array(batch.length).fill('pending') };
+  session.dotStates[0] = 'current';
+  openSession('Session aléatoire', batch.length);
+}
+
+function openSession(label, total) {
+  document.getElementById('session-label').textContent = label;
+  document.getElementById('session-overlay').classList.add('visible');
+  renderQcm();
+}
+
+function exitSession() {
+  if (!confirm('Quitter la session en cours ?')) return;
+  document.getElementById('session-overlay').classList.remove('visible');
+  renderHome();
+}
+
+// ─── RENDER QCM ───────────────────────────────────────────────────────────────
+let selected = new Set();
+let validated = false;
+
+function renderQcm() {
+  selected = new Set();
+  validated = false;
+  const { qcm, idx } = session;
+  const q = qcm[idx];
+
+  // Counter
+  document.getElementById('session-counter').textContent = `${idx + 1} / ${qcm.length}`;
+
+  // Progress strip
+  const strip = document.getElementById('progress-strip');
+  strip.innerHTML = '';
+  session.dotStates.forEach(state => {
+    const d = document.createElement('div');
+    d.className = 'strip-dot ' + (state === 'correct' ? 'done-correct' : state === 'wrong' ? 'done-wrong' : state === 'current' ? 'current' : '');
+    strip.appendChild(d);
+  });
+
+  // QCM area
+  const area = document.getElementById('qcm-area');
+  const meta = CHAPTER_META[q.chapitre];
+
+  let optionsHtml = '';
+  Object.entries(q.propositions).forEach(([letter, text]) => {
+    optionsHtml += `
+      <button class="option-btn" id="opt-${letter}" data-letter="${letter}" onclick="toggleOption('${letter}')">
+        <div class="option-letter">${letter}</div>
+        <div>${text}</div>
+      </button>`;
+  });
+
+  area.innerHTML = `
+    <div class="qcm-header">
+      <div class="qcm-chip">QCM #${q.id}</div>
+      <div class="qcm-chip" style="background:${meta.bg};color:${meta.color};border-color:${meta.light}">
+        ${meta.icon} ${meta.name}
+      </div>
+    </div>
+    <div class="qcm-question">${q.question}</div>
+    <div class="options-list">${optionsHtml}</div>
+    <div id="feedback-box"></div>
+    <div class="action-row">
+      <button class="btn-validate" id="btn-validate" onclick="validate()" disabled>Valider</button>
+    </div>
+  `;
+}
+
+function toggleOption(letter) {
+  if (validated) return;
+  if (selected.has(letter)) selected.delete(letter);
+  else selected.add(letter);
+
+  document.querySelectorAll('.option-btn').forEach(btn => {
+    const l = btn.dataset.letter;
+    btn.classList.toggle('selected', selected.has(l));
+  });
+  document.getElementById('btn-validate').disabled = selected.size === 0;
+}
+
+function validate() {
+  validated = true;
+  const q = session.qcm[session.idx];
+  const correct = new Set(q.reponses);
+  const isCorrect = selected.size === correct.size && [...selected].every(l => correct.has(l));
+
+  // Style options
+  document.querySelectorAll('.option-btn').forEach(btn => {
+    const l = btn.dataset.letter;
+    const isCorrectLetter = correct.has(l);
+    const isSelectedLetter = selected.has(l);
+    btn.classList.remove('selected');
+    btn.classList.add('validated');
+    if (isCorrectLetter && isSelectedLetter) btn.classList.add('correct-selected');
+    else if (isCorrectLetter && !isSelectedLetter) btn.classList.add('correct-missed');
+    else if (!isCorrectLetter && isSelectedLetter) btn.classList.add('wrong-selected');
+    else btn.classList.add('neutral-after');
+    btn.disabled = true;
+  });
+
+  // Feedback
+  const fb = document.getElementById('feedback-box');
+  if (isCorrect) {
+    fb.innerHTML = `<div class="feedback-box correct">✓ Correct ! Bonne réponse.</div>`;
+  } else {
+    fb.innerHTML = `<div class="feedback-box wrong">
+      ✗ Incorrect.
+      <div class="answer-detail">Bonnes réponses : ${q.reponses.join(', ')}</div>
+    </div>`;
+  }
+
+  // Update score & errors
+  if (isCorrect) session.score++;
+  else session.errors.push(q);
+  session.dotStates[session.idx] = isCorrect ? 'correct' : 'wrong';
+
+  // Replace validate button with next
+  const row = document.querySelector('.action-row');
+  const isLast = session.idx + 1 >= session.qcm.length;
+  row.innerHTML = `<button class="btn-next" onclick="nextQuestion()">${isLast ? 'Voir mes résultats →' : 'Question suivante →'}</button>`;
+
+  // Mark seen
+  const id = q.id;
+  seenIds.add(id);
+  if (session.mode === 'chapter') {
+    const ch = q.chapitre;
+    if (!progress[ch]) progress[ch] = { seen: new Set(), correct: 0 };
+    if (!progress[ch].seen.has(id)) {
+      progress[ch].seen.add(id);
+      if (isCorrect) progress[ch].correct++;
+    }
+  }
+  saveState();
+}
+
+function nextQuestion() {
+  session.idx++;
+  if (session.idx >= session.qcm.length) {
+    showResults();
+    return;
+  }
+  session.dotStates[session.idx] = 'current';
+  renderQcm();
+}
+
+// ─── RESULTS ──────────────────────────────────────────────────────────────────
+function showResults() {
+  document.getElementById('session-overlay').classList.remove('visible');
+  const pct = Math.round((session.score / session.qcm.length) * 100);
+  const grade = pct >= 80 ? 'Excellent 🎉' : pct >= 60 ? 'Bien 👍' : pct >= 40 ? 'Moyen 📚' : 'À retravailler 💪';
+  const color = pct >= 80 ? '#22c55e' : pct >= 60 ? '#f59e0b' : pct >= 40 ? '#fb923c' : '#ef4444';
+
+  document.getElementById('res-pct').textContent = pct + '%';
+  document.getElementById('res-pct').style.color = color;
+  document.getElementById('res-grade').textContent = grade;
+  document.getElementById('res-sub').textContent = `${session.score} / ${session.qcm.length} correctes`;
+
+  const errSec = document.getElementById('errors-section');
+  if (session.errors.length > 0) {
+    errSec.innerHTML = `<h3><span style="color:#ef4444">✗</span> Questions ratées (${session.errors.length})</h3>` +
+      session.errors.map(q => `
+        <div class="error-item">
+          <div class="err-meta">QCM #${q.id} · Ch. ${q.chapitre} · ${CHAPTER_META[q.chapitre].name}</div>
+          <div class="err-q">${q.question}</div>
+          <div class="err-ans">✓ Réponses : ${q.reponses.join(', ')}</div>
+        </div>
+      `).join('');
+  } else {
+    errSec.innerHTML = `<div style="text-align:center;padding:32px;color:var(--text-muted);font-size:15px">🎯 Aucune erreur — parfait !</div>`;
+  }
+
+  document.getElementById('results-overlay').classList.add('visible');
+}
+
+function retrySession() {
+  document.getElementById('results-overlay').classList.remove('visible');
+  if (session.mode === 'chapter') startChapter(session.chapter);
+  else startRandom();
+}
+
+function goHome() {
+  document.getElementById('results-overlay').classList.remove('visible');
+  renderHome();
+}
+</script>
+</body>
+</html>
