@@ -1625,11 +1625,11 @@
                 font-weight: 600;
             }
 
-            /* Dual-color progress bar (green = correct, red = wrong) */
+            /* Tri-color progress bar: green=correct, red=wrong, white=unanswered */
             .history-bar {
                 height: 6px;
                 border-radius: 99px;
-                background: #f3f4f6;
+                background: #e5e7eb;
                 overflow: hidden;
                 display: flex;
             }
@@ -1637,17 +1637,42 @@
             .history-bar-ok {
                 height: 100%;
                 background: #22c55e;
-                border-radius: 99px 0 0 99px;
-                transition: width .4s;
                 flex-shrink: 0;
+                transition: width .4s;
             }
 
             .history-bar-ko {
                 height: 100%;
                 background: #ef4444;
-                transition: width .4s;
-                border-radius: 0;
                 flex-shrink: 0;
+                transition: width .4s;
+            }
+
+            .history-bar-empty {
+                height: 100%;
+                background: #e5e7eb;
+                flex-shrink: 0;
+            }
+
+            /* Resume button inside history entries */
+            .history-resume-btn {
+                background: none;
+                border: 1px solid var(--border);
+                border-radius: 6px;
+                padding: 2px 8px;
+                font-size: 10px;
+                font-weight: 700;
+                font-family: 'Outfit', sans-serif;
+                color: var(--muted);
+                cursor: pointer;
+                transition: all .15s;
+                white-space: nowrap;
+            }
+
+            .history-resume-btn:hover {
+                border-color: #6366f1;
+                color: #6366f1;
+                background: #eef2ff;
             }
 
             /* ── FEATURE 4: RESET NOTIFICATION BANNER ────────────────────────── */
@@ -8002,33 +8027,41 @@
             // Columns: id, user_id, chapter, current_qcm, correct_answers,
             //          wrong_answers, created_at
 
+            // ── SUPABASE PROGRESS ─────────────────────────────────────────────
+
             async function loadProgress() {
                 if (!currentUser) return;
+
+                // 1. Reload chapter progress (seen/correct IDs)
                 const { data } = await db.from('progress').select('*').eq('user_id', currentUser.id);
                 prog = {};
                 seen = new Set();
                 if (data) {
                     data.forEach(row => {
                         prog[row.chapter] = {
-                            seen: new Set(row.seen_ids || []),
+                            seen:    new Set(row.seen_ids    || []),
                             correct: new Set(row.correct_ids || [])
                         };
                         (row.seen_ids || []).forEach(id => seen.add(id));
                     });
                 }
+
+                // 2. Reload study sessions so history panel survives page refresh
+                await loadHistory();
             }
 
             async function saveChapterProgress(ch) {
                 if (!currentUser || !prog[ch]) return;
-                const seenArr = [...prog[ch].seen];
+                const seenArr    = [...prog[ch].seen];
                 const correctArr = [...prog[ch].correct];
+                // Use upsert with ignoreDuplicates:false so it always updates
                 await db.from('progress').upsert({
-                    user_id: currentUser.id,
-                    chapter: ch,
-                    seen_ids: seenArr,
+                    user_id:     currentUser.id,
+                    chapter:     String(ch),
+                    seen_ids:    seenArr,
                     correct_ids: correctArr,
-                    updated_at: new Date().toISOString()
-                }, { onConflict: 'user_id,chapter' });
+                    updated_at:  new Date().toISOString()
+                }, { onConflict: 'user_id,chapter', ignoreDuplicates: false });
             }
 
             async function saveExamResult(score, total, timeSecs) {
@@ -8044,113 +8077,246 @@
             async function resetAllProgress() {
                 if (!currentUser) return;
                 await db.from('progress').delete().eq('user_id', currentUser.id);
-                // Also clear study_history for this user
-                await db.from('study_history').delete().eq('user_id', currentUser.id);
+                await db.from('study_sessions').delete().eq('user_id', currentUser.id);
                 prog = {};
                 seen = new Set();
-                studyHistory = [];
+                studySessions = [];
+                activeSession = null;
             }
 
-            // ── FEATURE 2 & 3: STUDY HISTORY ─────────────────────────────────
-            // Local cache of history entries loaded from Supabase
-            let studyHistory = [];
+            // ── STUDY SESSIONS ────────────────────────────────────────────────
+            // In-memory cache of recent sessions shown in the history panel
+            let studySessions = [];
+            // The currently active session row (loaded from or created in Supabase)
+            let activeSession = null;
 
             /**
-             * saveProgress — saves a study_history row for the current answer.
-             * Called after every answer in chapter mode (Feature 2).
-             * @param {string} chapter
-             * @param {number} currentQcm — question index (1-based)
-             * @param {number} correctAnswers — cumulative correct count for this session
-             * @param {number} wrongAnswers — cumulative wrong count for this session
+             * saveProgress — upserts the active session row after every answer.
+             * Stores current question index, correct/wrong counts, and the full
+             * answers map so the session can be resumed exactly.
              */
-            async function saveProgress(chapter, currentQcm, correctAnswers, wrongAnswers) {
-                if (!currentUser) return;
+            async function saveProgress() {
+                if (!currentUser || !activeSession) return;
                 try {
-                    await db.from('study_history').upsert({
-                        user_id: currentUser.id,
-                        chapter: String(chapter),
-                        current_qcm: currentQcm,
-                        correct_answers: correctAnswers,
-                        wrong_answers: wrongAnswers,
-                        // upsert on user_id+chapter so we update the row in-session
-                        updated_at: new Date().toISOString()
-                    }, { onConflict: 'user_id,chapter' });
+                    const { data, error } = await db
+                        .from('study_sessions')
+                        .upsert({
+                            id:               activeSession.id,
+                            user_id:          currentUser.id,
+                            chapter:          String(activeSession.chapter),
+                            current_question: activeSession.current_question,
+                            correct_answers:  activeSession.correct_answers,
+                            wrong_answers:    activeSession.wrong_answers,
+                            total_questions:  activeSession.total_questions,
+                            answers:          activeSession.answers,
+                            started_at:       activeSession.started_at,
+                            last_activity:    new Date().toISOString()
+                        }, { onConflict: 'id' })
+                        .select()
+                        .single();
+                    if (!error && data) activeSession = data;
                 } catch(e) {
-                    // Non-blocking — progress save failure should not interrupt quiz
                     console.warn('saveProgress error:', e);
                 }
             }
 
             /**
-             * loadHistory — fetches study_history rows from Supabase
-             * and caches them in studyHistory[].
+             * loadHistory — fetches the 20 most recent sessions for this user,
+             * sorted by last_activity DESC, and caches them in studySessions[].
              */
             async function loadHistory() {
                 if (!currentUser) return;
                 try {
                     const { data, error } = await db
-                        .from('study_history')
+                        .from('study_sessions')
                         .select('*')
                         .eq('user_id', currentUser.id)
-                        .order('updated_at', { ascending: false })
+                        .order('last_activity', { ascending: false })
                         .limit(20);
-                    if (!error && data) {
-                        studyHistory = data;
-                    }
+                    if (!error && data) studySessions = data;
                 } catch(e) {
                     console.warn('loadHistory error:', e);
                 }
             }
 
             /**
-             * displayHistory — renders the history panel from the studyHistory cache.
+             * displayHistory — renders the history panel from studySessions cache.
+             * Each entry shows: chapter name, date, tri-color progress bar
+             * (green = correct, red = wrong, white = unanswered), and a resume button.
              */
             function displayHistory() {
-                const body = document.getElementById('history-body');
-                const countEl = document.getElementById('history-count');
+                const body     = document.getElementById('history-body');
+                const countEl  = document.getElementById('history-count');
                 if (!body) return;
 
-                if (!studyHistory || studyHistory.length === 0) {
-                    body.innerHTML = '<div class="history-empty">No study sessions yet.<br>Complete a chapter to see your history here.</div>';
+                if (!studySessions || studySessions.length === 0) {
+                    body.innerHTML = '<div class="history-empty">No study sessions yet.<br>Start a chapter to track your progress.</div>';
                     if (countEl) countEl.textContent = '0 sessions';
                     return;
                 }
 
-                if (countEl) countEl.textContent = studyHistory.length + ' session' + (studyHistory.length > 1 ? 's' : '');
+                if (countEl) countEl.textContent =
+                    studySessions.length + ' session' + (studySessions.length > 1 ? 's' : '');
 
-                body.innerHTML = studyHistory.map(entry => {
-                    const chNum = parseInt(entry.chapter);
-                    const chInfo = CM[chNum] || { n: 'Chapter ' + entry.chapter, i: '📖' };
-                    const correct = entry.correct_answers || 0;
-                    const wrong = entry.wrong_answers || 0;
-                    const total = correct + wrong;
+                body.innerHTML = studySessions.map(s => {
+                    const chNum   = parseInt(s.chapter);
+                    const chInfo  = CM[chNum] || { n: 'Chapter ' + s.chapter, i: '📖' };
+                    const correct = s.correct_answers  || 0;
+                    const wrong   = s.wrong_answers    || 0;
+                    const total   = s.total_questions  || 50;
+                    const unanswered = Math.max(0, total - correct - wrong);
 
-                    // Calculate bar widths as percentages of total answers
-                    const okPct = total > 0 ? Math.round((correct / total) * 100) : 0;
-                    const koPct = total > 0 ? Math.round((wrong / total) * 100) : 0;
+                    // Each segment = its share of total_questions (not of answered)
+                    const okPct   = Math.round((correct    / total) * 100);
+                    const koPct   = Math.round((wrong      / total) * 100);
+                    const emPct   = Math.round((unanswered / total) * 100);
 
-                    // Format date
-                    const dateStr = entry.updated_at
-                        ? new Date(entry.updated_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })
+                    const dateStr = s.started_at
+                        ? new Date(s.started_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
                         : '—';
 
+                    const isComplete = (correct + wrong) >= total;
+                    const resumeLabel = isComplete ? '↺ Restart' : '▶ Resume';
+
                     return `
-                    <div class="history-entry">
+                    <div class="history-entry" data-session-id="${s.id}">
                         <div class="history-entry-meta">
-                            <div class="history-chapter">${chInfo.i} Ch.${entry.chapter} — ${chInfo.n}</div>
+                            <div class="history-chapter">${chInfo.i} Ch.${s.chapter} — ${chInfo.n}</div>
                             <div class="history-date">${dateStr}</div>
                         </div>
                         <div class="history-stats">
-                            <span class="history-stat-ok">✓ ${correct} correct</span>
-                            <span class="history-stat-ko">✗ ${wrong} wrong</span>
-                            ${entry.current_qcm ? '<span>Q' + entry.current_qcm + '</span>' : ''}
+                            <span class="history-stat-ok">✓ ${correct}</span>
+                            <span class="history-stat-ko">✗ ${wrong}</span>
+                            <span style="color:var(--light)">${unanswered} left</span>
+                            <span style="margin-left:auto">
+                                <button class="history-resume-btn" onclick="resumeSession('${s.id}')">${resumeLabel}</button>
+                            </span>
                         </div>
-                        <div class="history-bar" title="${okPct}% correct · ${koPct}% wrong">
+                        <div class="history-bar"
+                             title="${okPct}% correct · ${koPct}% wrong · ${emPct}% remaining">
                             <div class="history-bar-ok" style="width:${okPct}%"></div>
                             <div class="history-bar-ko" style="width:${koPct}%"></div>
+                            <div class="history-bar-empty" style="width:${emPct}%"></div>
                         </div>
                     </div>`;
                 }).join('');
+            }
+
+            /**
+             * createSession — inserts a fresh study_sessions row in Supabase
+             * and stores it in activeSession.
+             */
+            async function createSession(ch) {
+                if (!currentUser) return null;
+                const qcm = QD.filter(q => q.chapitre === ch);
+                const now = new Date().toISOString();
+                try {
+                    const { data, error } = await db
+                        .from('study_sessions')
+                        .insert({
+                            user_id:          currentUser.id,
+                            chapter:          String(ch),
+                            current_question: 0,
+                            correct_answers:  0,
+                            wrong_answers:    0,
+                            total_questions:  qcm.length,
+                            answers:          {},
+                            started_at:       now,
+                            last_activity:    now
+                        })
+                        .select()
+                        .single();
+                    if (!error && data) {
+                        activeSession = data;
+                        return data;
+                    }
+                } catch(e) {
+                    console.warn('createSession error:', e);
+                }
+                return null;
+            }
+
+            /**
+             * findIncompleteSession — looks in the local cache (or fetches) for an
+             * unfinished session for the given chapter.
+             */
+            async function findIncompleteSession(ch) {
+                if (!currentUser) return null;
+                try {
+                    const { data, error } = await db
+                        .from('study_sessions')
+                        .select('*')
+                        .eq('user_id', currentUser.id)
+                        .eq('chapter', String(ch))
+                        .order('last_activity', { ascending: false })
+                        .limit(1)
+                        .single();
+                    if (error || !data) return null;
+                    // Consider incomplete if not all questions answered
+                    const answered = (data.correct_answers || 0) + (data.wrong_answers || 0);
+                    if (answered < (data.total_questions || 50)) return data;
+                } catch(e) { /* not found */ }
+                return null;
+            }
+
+            /**
+             * resumeSession — called when the user clicks "Resume" in the history panel.
+             * Loads the saved session and restores the quiz at the saved question.
+             */
+            async function resumeSession(sessionId) {
+                if (!currentUser) return;
+                try {
+                    const { data, error } = await db
+                        .from('study_sessions')
+                        .select('*')
+                        .eq('id', sessionId)
+                        .single();
+                    if (error || !data) return;
+                    activeSession = data;
+                    const ch = parseInt(data.chapter);
+                    const qcm = QD.filter(q => q.chapitre === ch);
+
+                    // Restore sess state from saved session
+                    const savedAnswers = data.answers || {};
+                    const resumeIdx = Math.min(data.current_question || 0, qcm.length - 1);
+
+                    // Rebuild dots array from saved answers
+                    const dots = qcm.map((q, i) => {
+                        const ans = savedAnswers[i];
+                        if (ans === undefined) return i === resumeIdx ? 'c' : 'p';
+                        const cor = new Set(q.reponses);
+                        const sel = Array.isArray(ans) ? ans : [ans];
+                        const ok = sel.length === cor.size && sel.every(l => cor.has(l));
+                        return ok ? 'ok' : 'ko';
+                    });
+                    dots[resumeIdx] = 'c';
+
+                    sess = {
+                        qcm,
+                        idx:          resumeIdx,
+                        score:        data.correct_answers || 0,
+                        errs:         [],
+                        mode:         'ch',
+                        ch,
+                        dots,
+                        correctCount: data.correct_answers || 0,
+                        wrongCount:   data.wrong_answers   || 0,
+                        savedAnswers
+                    };
+
+                    // Restore seen IDs from saved answers
+                    Object.keys(savedAnswers).forEach(i => {
+                        const q = qcm[parseInt(i)];
+                        if (q) seen.add(q.id);
+                    });
+
+                    document.getElementById('slbl').textContent = 'Ch. ' + ch + ' — ' + CM[ch].n;
+                    document.getElementById('so').classList.add('on');
+                    startQuiz();
+                    drawQ();
+                } catch(e) {
+                    console.warn('resumeSession error:', e);
+                }
             }
 
             // ── MODAL ─────────────────────────────────────────────────────────────────────
@@ -8254,24 +8420,65 @@
                 document.getElementById('so').classList.remove('quiz-active');
             }
 
-            function startCh(ch) {
+            async function startCh(ch) {
                 const qcm = QD.filter(q => q.chapitre === ch);
+
+                // Check for an existing incomplete session
+                const existing = await findIncompleteSession(ch);
+
+                if (existing) {
+                    // Offer the user a choice: resume or start fresh
+                    const answered = (existing.correct_answers || 0) + (existing.wrong_answers || 0);
+                    modal(
+                        'Resume session?',
+                        `You have an unfinished session for this chapter (${answered}/${existing.total_questions} answered). Resume where you left off?`,
+                        'Resume',
+                        () => resumeSession(existing.id),
+                        false
+                    );
+                    // Also add a "Start fresh" option by patching the modal
+                    setTimeout(() => {
+                        const mbtns = document.querySelector('.mbtns');
+                        if (mbtns) {
+                            const freshBtn = document.createElement('button');
+                            freshBtn.className = 'mcancel';
+                            freshBtn.textContent = 'Start fresh';
+                            freshBtn.style.cssText = 'color:#6366f1;border-color:#6366f1';
+                            freshBtn.onclick = async () => {
+                                cModal();
+                                await launchFreshSession(ch, qcm);
+                            };
+                            mbtns.insertBefore(freshBtn, mbtns.firstChild);
+                        }
+                    }, 0);
+                    return;
+                }
+
+                await launchFreshSession(ch, qcm);
+            }
+
+            /**
+             * launchFreshSession — creates a new session row and starts the quiz.
+             */
+            async function launchFreshSession(ch, qcm) {
+                await createSession(ch);
+
                 sess = {
                     qcm,
-                    idx: 0,
-                    score: 0,
-                    errs: [],
-                    mode: 'ch',
+                    idx:          0,
+                    score:        0,
+                    errs:         [],
+                    mode:         'ch',
                     ch,
-                    dots: Array(qcm.length).fill('p'),
-                    // Feature 2: track correct/wrong counts for history saving
+                    dots:         Array(qcm.length).fill('p'),
                     correctCount: 0,
-                    wrongCount: 0
+                    wrongCount:   0,
+                    savedAnswers: {}
                 };
                 sess.dots[0] = 'c';
                 document.getElementById('slbl').textContent = 'Ch. ' + ch + ' — ' + CM[ch].n;
                 document.getElementById('so').classList.add('on');
-                startQuiz(); // Feature 5: activate quiz font
+                startQuiz();
                 drawQ();
             }
 
@@ -8297,7 +8504,8 @@
 
             function askExit() {
                 modal('Leave session?', 'Your progress in this session will not be saved.', 'Leave', () => {
-                    endQuiz(); // Feature 5: deactivate quiz font
+                    endQuiz();
+                    activeSession = null;
                     document.getElementById('so').classList.remove('on');
                     renderHome();
                 });
@@ -8343,32 +8551,39 @@
             }
 
             /**
-             * handleAnswer — core logic after user validates an answer.
-             * Feature 2: increments correct/wrong counters, saves to Supabase.
-             * Feature 3: updates local history cache and re-renders panel.
-             * Feature 4: on wrong answer, shows reset banner and resets current_qcm to 1.
+             * handleAnswer — updates activeSession after every validated answer,
+             * saves to Supabase, and refreshes the history panel.
+             * On wrong answer: shows reset banner (Feature 4).
              */
             async function handleAnswer(q, ok) {
-                if (sess.mode !== 'ch') return; // history only tracked in chapter mode
+                if (sess.mode !== 'ch') return;
 
+                // Update counters
                 if (ok) {
                     sess.correctCount = (sess.correctCount || 0) + 1;
                 } else {
                     sess.wrongCount = (sess.wrongCount || 0) + 1;
                 }
 
-                const ch = q.chapitre;
-                // Feature 4: reset current_qcm to 1 on wrong answer
-                const currentQcm = ok ? sess.idx + 1 : 1;
+                // Update activeSession fields
+                if (activeSession) {
+                    activeSession.correct_answers  = sess.correctCount;
+                    activeSession.wrong_answers    = sess.wrongCount;
+                    activeSession.current_question = sess.idx; // current index (0-based)
 
-                // Feature 2: save progress to Supabase study_history
-                await saveProgress(ch, currentQcm, sess.correctCount, sess.wrongCount);
+                    // Save the selected answers for this question index
+                    if (!activeSession.answers) activeSession.answers = {};
+                    activeSession.answers[sess.idx] = [...selQ];
 
-                // Feature 3: refresh local history cache and redisplay
+                    // Persist to Supabase
+                    await saveProgress();
+                }
+
+                // Refresh history panel
                 await loadHistory();
                 displayHistory();
 
-                // Feature 4: show inline reset banner if wrong
+                // Feature 4: show reset banner on wrong answer
                 if (!ok) {
                     const fbEl = document.getElementById('fb');
                     if (fbEl) {
@@ -8634,7 +8849,8 @@
 
             // ── RESULTS ───────────────────────────────────────────────────────────────────
             function showRes() {
-                endQuiz(); // Feature 5: deactivate quiz font when session ends
+                endQuiz();
+                activeSession = null;
                 document.getElementById('so').classList.remove('on');
                 const {score, qcm, errs} = sess;
                 const pct = Math.round(score / qcm.length * 100);
@@ -8671,7 +8887,8 @@
             }
 
             function goHome() {
-                endQuiz(); // Feature 5: deactivate quiz font
+                endQuiz();
+                activeSession = null;
                 document.getElementById('ro').classList.remove('on');
                 document.getElementById('so').classList.remove('on');
                 document.getElementById('eo').classList.remove('on');
@@ -8684,23 +8901,22 @@
 db.auth.onAuthStateChange(async (event, session) => {
     if (session) {
         currentUser = session.user;
-        const email = currentUser.email;
+        const email    = currentUser.email;
         const initials = email.substring(0, 2).toUpperCase();
 
-        document.getElementById('user-avatar').textContent = initials;
+        document.getElementById('user-avatar').textContent        = initials;
         document.getElementById('user-email-display').textContent = email.split('@')[0];
         document.getElementById('auth-screen').classList.add('hidden');
-        
-        // ✅ 1️⃣ On affiche immédiatement (progression vide)
+
+        // Show home immediately with empty state
         renderHome();
-        
-        // ✅ 2️⃣ On charge la progression et l'historique en arrière-plan
-        await loadProgress();
-        await loadHistory(); // Feature 3: load study history
-        
-        // ✅ 3️⃣ On re-render avec les vraies données
+
+        // Load all data from Supabase (progress + sessions in one call)
+        await loadProgress(); // also calls loadHistory() internally
+
+        // Re-render with real data
         renderHome();
-        displayHistory(); // Feature 3: render history panel
+        displayHistory();
 
     } else {
         currentUser = null;
