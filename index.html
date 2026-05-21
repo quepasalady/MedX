@@ -7947,7 +7947,7 @@
 
             // ── SESSION ───────────────────────────────────────────────────────────────────
             function startCh(ch) {
-                const qcm = QD.filter(q => q.chapitre === ch);
+                const qcm = shuffle(QD.filter(q => q.chapitre === ch));
                 sess = {
                     qcm,
                     idx: 0,
